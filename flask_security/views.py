@@ -10,7 +10,7 @@
 """
 
 from flask import current_app, redirect, request, jsonify, \
-    after_this_request, Blueprint
+    after_this_request, Blueprint, make_response
 from flask_login import current_user
 from werkzeug.datastructures import MultiDict
 from werkzeug.local import LocalProxy
@@ -49,7 +49,7 @@ def _render_json(form, include_user=True, include_auth_token=False):
             token = form.user.get_auth_token()
             response['user']['authentication_token'] = token
 
-    return jsonify(dict(meta=dict(code=code), response=response))
+    return make_response(jsonify(response), code)
 
 
 def _commit(response=None):
@@ -101,7 +101,8 @@ def logout():
 def register():
     """View function which handles a registration request."""
 
-    if _security.confirmable or request.json:
+    # Abner: I don't know why request.json is here so I commented it out
+    if _security.confirmable:  # or request.json:
         form_class = _security.confirm_register_form
     else:
         form_class = _security.register_form
