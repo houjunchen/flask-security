@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """
-    flask.ext.security.utils
-    ~~~~~~~~~~~~~~~~~~~~~~~~
+    flask_security.utils
+    ~~~~~~~~~~~~~~~~~~~~
 
     Flask-Security utils module
 
@@ -23,9 +23,9 @@ from contextlib import contextmanager
 from datetime import datetime, timedelta
 
 from flask import url_for, flash, current_app, request, session, render_template
-from flask.ext.login import login_user as _login_user, logout_user as _logout_user
-from flask.ext.mail import Message
-from flask.ext.principal import Identity, AnonymousIdentity, identity_changed
+from flask_login import login_user as _login_user, logout_user as _logout_user
+from flask_mail import Message
+from flask_principal import Identity, AnonymousIdentity, identity_changed
 from itsdangerous import BadSignature, SignatureExpired
 from werkzeug.local import LocalProxy
 
@@ -62,10 +62,10 @@ def login_user(user, remember=None):
         return False
 
     if _security.trackable:
-        if 'X-Forwarded-For' not in request.headers:
-            remote_addr = request.remote_addr or 'untrackable'
+        if 'X-Forwarded-For' in request.headers:
+            remote_addr = request.headers.getlist("X-Forwarded-For")[0].rpartition(' ')[-1]
         else:
-            remote_addr = request.headers.getlist("X-Forwarded-For")[0]
+            remote_addr = request.remote_addr or 'untrackable'
 
         old_current_login, new_current_login = user.current_login_at, datetime.utcnow()
         old_current_ip, new_current_ip = user.current_login_ip, remote_addr
@@ -188,6 +188,14 @@ def get_url(endpoint_or_url):
         return endpoint_or_url
 
 
+def slash_url_suffix(url, suffix):
+    """Adds a slash either to the beginning or the end of a suffix
+    (which is to be appended to a URL), depending on whether or not
+    the URL ends with a slash."""
+
+    return url.endswith('/') and ('%s/' % suffix) or ('/%s' % suffix)
+
+
 def get_security_endpoint_name(endpoint):
     return '%s.%s' % (_security.blueprint_name, endpoint)
 
@@ -200,6 +208,8 @@ def url_for_security(endpoint, **values):
     :param _external: if set to `True`, an absolute URL is generated. Server
       address can be changed via `SERVER_NAME` configuration variable which
       defaults to `localhost`.
+    :param _scheme: a string specifying the desired URL scheme. The `_external`
+      parameter must be set to `True` or a `ValueError` is raised.
     :param _anchor: if provided this is added as anchor to the URL.
     :param _method: if provided this explicitly specifies an HTTP method.
     """
@@ -333,7 +343,7 @@ def send_mail(subject, recipient, template, **context):
     mail.send(msg)
 
 
-def get_token_status(token, serializer, max_age=None):
+def get_token_status(token, serializer, max_age=None, return_data=False):
     """Get the status of a token.
 
     :param token: The token to check
@@ -359,7 +369,11 @@ def get_token_status(token, serializer, max_age=None):
         user = _datastore.find_user(id=data[0])
 
     expired = expired and (user is not None)
-    return expired, invalid, user
+
+    if return_data:
+        return expired, invalid, user, data
+    else:
+        return expired, invalid, user
 
 
 def get_identity_attributes(app=None):
