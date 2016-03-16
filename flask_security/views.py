@@ -101,17 +101,10 @@ def logout():
 def register():
     """View function which handles a registration request."""
 
-    # https://github.com/mattupstate/flask-security/pull/58#issuecomment-19940133
-    # Abner: According to the link above, the author believes that no retyping
-    # password would have better UX. But in our situatino, I decide to use
-    # register_form in any case to have unified UX for all clients.
-    #
-    # if _security.confirmable or request.json:
-    #     form_class = _security.confirm_register_form
-    # else:
-    #     form_class = _security.register_form
-
-    form_class = _security.register_form
+    if _security.confirmable or request.json:
+        form_class = _security.confirm_register_form
+    else:
+        form_class = _security.register_form
 
     if request.json:
         form_data = MultiDict(request.json)
